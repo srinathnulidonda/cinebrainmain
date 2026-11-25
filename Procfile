@@ -1,2 +1,1 @@
-web: gunicorn -c gunicorn.conf.py main:app
-worker: python -m app.workers.refresh
+web: alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port $PORT

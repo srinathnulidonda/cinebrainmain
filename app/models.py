@@ -1,5 +1,4 @@
 # app/models.py
-
 from datetime import date, datetime
 
 from sqlalchemy import (
@@ -33,6 +32,7 @@ class TimestampMixin:
 
 class Content(TimestampMixin, Base):
     __tablename__ = "contents"
+
     id: Mapped[int] = mapped_column(primary_key=True)
     tmdb_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     imdb_id: Mapped[str | None] = mapped_column(String(20), nullable=True, index=True)
@@ -64,13 +64,21 @@ class Content(TimestampMixin, Base):
         Index("ix_content_type_trending", "content_type", "is_trending"),
         Index("ix_content_type_release", "content_type", "release_date"),
         Index("ix_content_rating_votes", "rating", "vote_count"),
+        Index("ix_content_release_popularity", "release_date", "popularity"),
         Index("ix_content_genres_gin", "genres", postgresql_using="gin"),
         Index("ix_content_languages_gin", "languages", postgresql_using="gin"),
+        Index(
+            "ix_content_title_trgm",
+            "title",
+            postgresql_using="gin",
+            postgresql_ops={"title": "gin_trgm_ops"},
+        ),
     )
 
 
 class Person(TimestampMixin, Base):
     __tablename__ = "persons"
+
     id: Mapped[int] = mapped_column(primary_key=True)
     tmdb_id: Mapped[int] = mapped_column(Integer, unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
@@ -84,6 +92,7 @@ class Person(TimestampMixin, Base):
     known_for_department: Mapped[str | None] = mapped_column(String(50), nullable=True)
     gender: Mapped[int | None] = mapped_column(Integer, nullable=True)
     also_known_as: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
+
     __table_args__ = (
         Index("ix_person_popularity", "popularity"),
         Index("ix_person_known_for_dept", "known_for_department"),
@@ -92,6 +101,7 @@ class Person(TimestampMixin, Base):
 
 class ContentPerson(Base):
     __tablename__ = "content_persons"
+
     id: Mapped[int] = mapped_column(primary_key=True)
     content_id: Mapped[int] = mapped_column(ForeignKey("contents.id", ondelete="CASCADE"), nullable=False, index=True)
     person_id: Mapped[int] = mapped_column(ForeignKey("persons.id", ondelete="CASCADE"), nullable=False, index=True)
@@ -100,6 +110,7 @@ class ContentPerson(Base):
     job: Mapped[str | None] = mapped_column(String(100), nullable=True)
     department: Mapped[str | None] = mapped_column(String(100), nullable=True)
     order: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
     __table_args__ = (
         UniqueConstraint("content_id", "person_id", "role_type", "character", "job", name="uq_content_person_role"),
         Index("ix_content_person_content_role", "content_id", "role_type"),
@@ -109,12 +120,15 @@ class ContentPerson(Base):
 
 class AnonymousInteraction(Base):
     __tablename__ = "anonymous_interactions"
+
     id: Mapped[int] = mapped_column(primary_key=True)
-    session_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    # No index=True here: ix_anon_session is declared explicitly in __table_args__
+    session_id: Mapped[str] = mapped_column(String(64), nullable=False)
     content_id: Mapped[int] = mapped_column(ForeignKey("contents.id", ondelete="CASCADE"), nullable=False)
     interaction_type: Mapped[str] = mapped_column(String(20), nullable=False)
     interaction_metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
     __table_args__ = (
         Index("ix_anon_session", "session_id"),
         Index("ix_anon_session_type", "session_id", "interaction_type"),
