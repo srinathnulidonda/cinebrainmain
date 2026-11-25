@@ -1,0 +1,25 @@
+# pyproject.toml
+
+[project]
+name = "cinebrain-backend"
+version = "2.0.0"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "C4", "UP", "PERF", "SIM", "RUF", "LOG", "BLE", "S110", "S112", "ASYNC", "T20"]
+ignore = ["B008", "RUF012", "RUF006"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["BLE001"]
